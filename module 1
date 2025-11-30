@@ -1,0 +1,61 @@
+---- MODULE USP_VIREL ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS 
+    Domains, 
+    EpochMax, 
+    LamportMax
+
+VARIABLES 
+    state, 
+    epoch, 
+    lamport, 
+    quorum_votes, 
+    provisional_timer
+
+Init ==
+    /\ state \in {"OPERATIONAL", "SAFE_ON"}
+    /\ epoch = 0
+    /\ lamport = 0
+    /\ quorum_votes \in [d \in Domains |-> Seq({"HALT", "RES"})]
+    /\ provisional_timer = 0
+
+HaltPrecedence ==
+    \E d \in Domains :
+        /\ Len(quorum_votes[d]) >= 2
+        /\ "HALT" \in {v : v \in quorum_votes[d]}
+        /\ state' = "SAFE_ON"
+        /\ epoch' = epoch
+        /\ lamport' = lamport + 1
+        /\ UNCHANGED << quorum_votes, provisional_timer >>
+
+EpochMonotonicity ==
+    /\ epoch' >= epoch
+    /\ UNCHANGED << state, lamport, quorum_votes, provisional_timer >>
+
+AntiReplay ==
+    /\ lamport' > lamport \/ epoch' > epoch
+    /\ UNCHANGED << state, quorum_votes, provisional_timer >>
+
+ProvisionalSafety ==
+    LET auth_uncertain == TRUE
+    IN auth_uncertain =>
+        /\ state' = "SAFE_ON"
+        /\ UNCHANGED << epoch, lamport, quorum_votes, provisional_timer >>
+
+Next ==
+    \/ HaltPrecedence
+    \/ EpochMonotonicity
+    \/ AntiReplay
+    \/ ProvisionalSafety
+
+TypeOK ==
+    /\ state \in {"OPERATIONAL", "SAFE_ON"}
+    /\ epoch \in 0..EpochMax
+    /\ lamport \in 0..LamportMax
+    /\ /\ quorum_votes \in [d \in Domains |-> Seq({"HALT", "RES"})]
+    /\ provisional_timer \in Nat
+
+Spec == Init /\ [][Next]_<<state, epoch, lamport, quorum_votes, provisional_timer>>
+
+Invariant == TypeOK
