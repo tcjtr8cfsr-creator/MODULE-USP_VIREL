@@ -1,0 +1,41 @@
+name: USP_VIREL CLI
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "usp_cli.py"
+      - ".github/workflows/usp_cli.yml"
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  run-usp-cli:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CLI dependencies (if any)
+        run: |
+          echo "No dependencies yet — clean environment."
+
+      # Run a scripted test session of your CLI
+      - name: Run USP_VIREL scripted scenario
+        run: |
+          echo "Running USP CLI test scenario..."
+          printf "show\ncast A HALT\ncast A RES\nstep\nshow\nexit\n" | python usp_cli.py | tee usp_output.txt
+
+      # Upload the CLI output as an artifact
+      - name: Upload CLI logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: usp-cli-output
+          path: usp_output.txt
